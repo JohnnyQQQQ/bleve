@@ -131,7 +131,7 @@ func (s *Scorch) loadSegmentPlugin(forcedSegmentType string,
 	if err != nil {
 		return err
 	}
-	s.segPlugin = segPlugin
+	s.segPlugin = UseNonMmapMode(segPlugin, s.useMmap)
 	return nil
 }
 
@@ -141,4 +141,34 @@ func (s *Scorch) loadSpatialAnalyzerPlugin(typ string) error {
 		return fmt.Errorf("unsupported spatial plugin type: %s", typ)
 	}
 	return nil
+}
+
+// NonMmapSegmentPlugin wraps an existing SegmentPlugin and overrides
+// its Open method to provide a non-mmap implementation
+type NonMmapSegmentPlugin struct {
+	SegmentPlugin
+}
+
+// Open overrides the underlying plugin's Open method to provide
+// a non-memory-mapped implementation
+func (p *NonMmapSegmentPlugin) Open(path string) (segment.Segment, error) {
+	// Create a new file-based segment without using mmap
+	fileSeg, err := NewFileSegment(path)
+	if err != nil {
+		return nil, err
+	}
+
+	// We're not using the original plugin at all anymore, so we don't need
+	// to open the file with the original plugin which would use mmap
+
+	return fileSeg, nil
+}
+
+// UseNonMmapMode wraps the given segment plugin in a NonMmapSegmentPlugin
+// if useMmap is false, otherwise returns the original plugin
+func UseNonMmapMode(plugin SegmentPlugin, useMmap bool) SegmentPlugin {
+	if useMmap {
+		return plugin
+	}
+	return &NonMmapSegmentPlugin{SegmentPlugin: plugin}
 }

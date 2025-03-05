@@ -48,6 +48,7 @@ type Scorch struct {
 	path          string
 
 	unsafeBatch bool
+	useMmap     bool
 
 	rootLock sync.RWMutex
 
@@ -121,6 +122,13 @@ func NewScorch(storeName string,
 		forceMergeRequestCh:  make(chan *mergerCtrl, 1),
 		segPlugin:            defaultSegmentPlugin,
 		copyScheduled:        map[string]int{},
+		useMmap:              true, // true by default for backward compatibility
+	}
+
+	// Check if mmap should be disabled
+	useMmapVal, ok := config["use_mmap"].(bool)
+	if ok {
+		rv.useMmap = useMmapVal
 	}
 
 	forcedSegmentType, forcedSegmentVersion, err := configForceSegmentTypeVersion(config)
@@ -133,6 +141,9 @@ func NewScorch(storeName string,
 		if err != nil {
 			return nil, err
 		}
+	} else {
+		// No forced plugin specified, so apply the non-mmap wrapper to the default plugin if needed
+		rv.segPlugin = UseNonMmapMode(rv.segPlugin, rv.useMmap)
 	}
 
 	typ, ok := config["spatialPlugin"].(string)

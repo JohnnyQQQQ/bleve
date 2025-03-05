@@ -376,13 +376,18 @@ func (s *Scorch) planMergeAtSnapshot(ctx context.Context,
 			atomic.AddUint64(&s.stats.TotFileMergeSegments, uint64(len(segmentsToMerge)))
 		}
 
+		mmaped := uint32(0)
+		if s.useMmap {
+			mmaped = 1
+		}
+
 		sm := &segmentMerge{
 			id:            newSegmentID,
 			old:           oldMap,
 			oldNewDocNums: oldNewDocNums,
 			new:           seg,
 			notifyCh:      make(chan *mergeTaskIntroStatus),
-			mmaped:        1,
+			mmaped:        mmaped,
 		}
 
 		s.fireEvent(EventKindMergeTaskIntroductionStart, 0)
@@ -494,12 +499,18 @@ func (s *Scorch) mergeSegmentBases(snapshot *IndexSnapshot,
 	atomic.AddUint64(&s.stats.TotPersistedItems, seg.Count())
 	atomic.AddUint64(&s.stats.TotPersistedSegments, 1)
 
+	mmaped := uint32(0)
+	if s.useMmap {
+		mmaped = 1
+	}
+
 	sm := &segmentMerge{
 		id:            newSegmentID,
 		old:           make(map[uint64]*SegmentSnapshot, len(sbsIndexes)),
 		oldNewDocNums: make(map[uint64][]uint64, len(sbsIndexes)),
 		new:           seg,
 		notifyCh:      make(chan *mergeTaskIntroStatus),
+		mmaped:        mmaped,
 	}
 
 	for i, idx := range sbsIndexes {
