@@ -122,7 +122,7 @@ func NewScorch(storeName string,
 		forceMergeRequestCh:  make(chan *mergerCtrl, 1),
 		segPlugin:            defaultSegmentPlugin,
 		copyScheduled:        map[string]int{},
-		useMmap:              true, // true by default for backward compatibility
+		useMmap:              false,
 	}
 
 	// Check if mmap should be disabled
